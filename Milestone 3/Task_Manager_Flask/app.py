@@ -13,12 +13,11 @@ def get_db_connection():
 def init_db():
     conn = get_db_connection()
     conn.execute('''
-        CREATE TABLE IF NOT EXISTS tasks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            description TEXT
-        )
-    ''')
+    CREATE TABLE IF NOT EXISTS tasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL
+    )
+''')
     conn.commit()
     conn.close()
 
@@ -33,39 +32,28 @@ def index():
 def add():
     if request.method == 'POST':
         title = request.form['title']
-        description = request.form.get('description', '')
-        if not title:
-            flash('Title is required!')
-        else:
+        if title:
             conn = get_db_connection()
-            conn.execute('INSERT INTO tasks (title, description) VALUES (?, ?)',
-                         (title, description))
+            conn.execute('INSERT INTO tasks (title) VALUES (?)', (title,))
             conn.commit()
             conn.close()
             return redirect(url_for('index'))
-    return render_template('add.html')
+    return render_template('task_form.html')
 
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit(id):
     conn = get_db_connection()
     task = conn.execute('SELECT * FROM tasks WHERE id = ?', (id,)).fetchone()
-    if task is None:
-        flash('Task not found!')
-        return redirect(url_for('index'))
+    
     if request.method == 'POST':
-        title = request.form['title']
-        description = request.form.get('description', '')
-        if not title:
-            flash('Title is required!')
-        else:
-            conn.execute('UPDATE tasks SET title = ?, description = ? WHERE id = ?',
-                         (title, description, id))
-            conn.commit()
-            conn.close()
-            flash('Task updated successfully!')
-            return redirect(url_for('index'))
+        new_title = request.form['title']
+        conn.execute('UPDATE tasks SET title = ? WHERE id = ?', (new_title, id))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('index'))
+        
     conn.close()
-    return render_template('edit.html', task=task)
+    return render_template('task_form.html', task=task, edit_mode=True)
 
 @app.route('/delete/<int:id>')
 def delete(id):
